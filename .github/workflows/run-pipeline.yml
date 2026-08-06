@@ -1,0 +1,73 @@
+name: Run meeting-notes-to-clickup pipeline
+
+# Fires hourly, every day -- the "check" job below is what actually enforces
+# 9am-5pm weekdays. Cron itself only understands UTC and can't follow
+# daylight saving, so the business-hours window is enforced at runtime
+# against Australia/Sydney local time instead of baked into the cron
+# expression. Manual runs (workflow_dispatch) always execute, regardless of
+# time, so this can be triggered on demand for testing.
+"on":
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: meeting-notes-to-clickup
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.decide.outputs.should_run }}
+    steps:
+      - id: decide
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          hour=$(TZ='Australia/Sydney' date +%H)
+          day=$(TZ='Australia/Sydney' date +%u)  # 1=Mon .. 7=Sun
+          if [ "$day" -ge 6 ] || [ "$hour" -lt 9 ] || [ "$hour" -gt 17 ]; then
+            echo "Outside business hours (Sydney day=$day hour=$hour) -- skipping."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  run:
+    needs: check
+    if: needs.check.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Write Google service account credentials
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        run: echo "$GOOGLE_SERVICE_ACCOUNT_JSON" > service-account.json
+
+      - name: Run pipeline
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLICKUP_API_TOKEN: ${{ secrets.CLICKUP_API_TOKEN }}
+          GOOGLE_SERVICE_ACCOUNT_FILE: service-account.json
+        run: python main.py
+
+      - name: Commit updated state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add state.json run_log.jsonl
+          git diff --staged --quiet || git commit -m "Update pipeline state [skip ci]"
+          git push

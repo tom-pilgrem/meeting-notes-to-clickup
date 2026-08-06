@@ -3,7 +3,10 @@ __pycache__/
 .venv/
 venv/
 .env
-state.json
 *.log
 service-account.json
-run_log.jsonl
+
+# state.json and run_log.jsonl are intentionally tracked, not ignored --
+# the GitHub Actions workflow commits them back after every run since
+# runners are ephemeral and have nothing else to persist state to. See
+# CLAUDE.md "Cloud Scheduling" section.
