@@ -153,15 +153,48 @@ reprocessed deliberately). A simple local JSON/SQLite state file mapping
 `doc_id -> {last_processed_at, modifiedTime, created_task_ids}` is enough for
 this project's scale -- don't reach for a database service.
 
+`state.json` and `run_log.jsonl` are tracked in git, not gitignored (see
+"Cloud Scheduling" below) -- this is intentional, not an accident. Never
+add them back to `.gitignore`.
+
+---
+
+## Cloud Scheduling
+
+The pipeline runs on a schedule via GitHub Actions
+(`.github/workflows/run-pipeline.yml`), not on anyone's laptop or a
+third-party cloud service (AWS Lambda, Fabric, and Databricks were
+considered and rejected as overkill for a script this small that already
+lives in this repo).
+
+**Why `state.json` and `run_log.jsonl` are committed back to the repo:**
+GitHub Actions runners are ephemeral -- a fresh VM per run, nothing persists
+on disk between runs. The workflow commits both files back to the repo
+after every run so the dedup logic keeps working across runs. If you ever
+change the persistence mechanism (e.g. move to S3, a database, etc.),
+update this section and the workflow together -- don't let them drift.
+
+**Schedule:** hourly, 9am-5pm, Monday-Friday, Australia/Sydney time
+(business hours for this org). Cron itself is UTC-only and can't follow
+daylight saving, so the business-hours window is enforced at runtime inside
+the workflow (a `check` job compares the actual Sydney local time), not
+baked into the cron expression. If the business hours or timezone ever
+change, update the `check` job's shell logic in the workflow file, not a
+cron string.
+
+**Manual runs** (`workflow_dispatch`) always execute regardless of time --
+the business-hours gate only applies to `schedule`-triggered runs. This is
+deliberate, so the pipeline can be triggered on demand for testing without
+fighting the time gate.
+
 ---
 
 ## Suggested Build Approach
 
-This repo doesn't have a runtime chosen yet. Default assumption: a small
-Python script (Anthropic SDK + Google Drive API client + ClickUp REST API),
-runnable on demand and easy to put on a schedule (cron / Task Scheduler)
-later. Confirm with the user before scaffolding if this doesn't match what
-they have in mind.
+A small Python script (Anthropic SDK + Google Drive API client + ClickUp
+REST API), runnable on demand and scheduled via GitHub Actions (see "Cloud
+Scheduling" below). Confirm with the user before making a significant
+change to this shape if it doesn't match what they have in mind.
 
 While developing/testing in this Claude Code session, Drive and ClickUp
 connectors may already be available as MCP tools -- fine to use them for
