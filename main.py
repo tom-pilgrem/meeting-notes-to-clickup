@@ -89,8 +89,18 @@ def process_doc(doc: dict, state: dict) -> None:
 
 
 def run() -> None:
-    state = load_state()
-    docs = drive.list_docs()
+    try:
+        state = load_state()
+        docs = drive.list_docs()
+    except Exception as e:
+        # Nothing has run yet, so there's no per-doc loop to fall back on --
+        # log it explicitly rather than crashing with nothing recorded.
+        # Important once this runs unattended on a schedule with no one
+        # watching the console.
+        _log({"event": "fatal_error", "error": str(e)})
+        print(f"[FATAL] {e}")
+        raise
+
     _log({"event": "run_start", "docs_seen": len(docs)})
 
     for doc in docs:
