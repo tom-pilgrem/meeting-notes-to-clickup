@@ -64,7 +64,9 @@ def process_doc(doc: dict, state: dict) -> None:
                 "description": _flag_note(extraction)
                 + (f"\n\n{item['description']}" if item.get("description") else ""),
             }
-        task = clickup.create_task(item)
+        task = clickup.create_task(
+            item, flag_type=extraction["flag_type"] if flagged else None
+        )
         created_task_ids.append(task["id"])
         _log(
             {
