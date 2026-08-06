@@ -13,10 +13,9 @@ EXTRACTION_MODEL = "claude-haiku-4-5"
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 CLICKUP_API_TOKEN = os.environ.get("CLICKUP_API_TOKEN")
-GOOGLE_OAUTH_CLIENT_SECRETS_FILE = os.environ.get(
-    "GOOGLE_OAUTH_CLIENT_SECRETS_FILE", "./client_secret.json"
+GOOGLE_SERVICE_ACCOUNT_FILE = os.environ.get(
+    "GOOGLE_SERVICE_ACCOUNT_FILE", "./service-account.json"
 )
-GOOGLE_OAUTH_TOKEN_FILE = os.environ.get("GOOGLE_OAUTH_TOKEN_FILE", "./token.json")
 
 STATE_FILE = "state.json"
 RUN_LOG_FILE = "run_log.jsonl"

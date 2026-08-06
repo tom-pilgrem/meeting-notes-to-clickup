@@ -1,42 +1,18 @@
 """Google Drive access: list meeting note docs in the watched folder and pull their text."""
 
-import os
-
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-from config import (
-    GOOGLE_DRIVE_FOLDER_ID,
-    GOOGLE_OAUTH_CLIENT_SECRETS_FILE,
-    GOOGLE_OAUTH_TOKEN_FILE,
-)
+from config import GOOGLE_DRIVE_FOLDER_ID, GOOGLE_SERVICE_ACCOUNT_FILE
 
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
 
-def _get_credentials() -> Credentials:
-    creds = None
-    if os.path.exists(GOOGLE_OAUTH_TOKEN_FILE):
-        creds = Credentials.from_authorized_user_file(GOOGLE_OAUTH_TOKEN_FILE, SCOPES)
-
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                GOOGLE_OAUTH_CLIENT_SECRETS_FILE, SCOPES
-            )
-            creds = flow.run_local_server(port=0)
-        with open(GOOGLE_OAUTH_TOKEN_FILE, "w", encoding="utf-8") as f:
-            f.write(creds.to_json())
-
-    return creds
-
-
 def _drive_service():
-    return build("drive", "v3", credentials=_get_credentials())
+    credentials = service_account.Credentials.from_service_account_file(
+        GOOGLE_SERVICE_ACCOUNT_FILE, scopes=SCOPES
+    )
+    return build("drive", "v3", credentials=credentials)
 
 
 def list_docs(folder_id: str = GOOGLE_DRIVE_FOLDER_ID) -> list[dict]:
