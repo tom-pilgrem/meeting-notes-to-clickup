@@ -8,7 +8,7 @@ name: Run meeting-notes-to-clickup pipeline
 # time, so this can be triggered on demand for testing.
 "on":
   schedule:
-    - cron: "0 * * * *"
+    - cron: "25 * * * *"
   workflow_dispatch: {}
 
 concurrency:
