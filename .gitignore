@@ -5,6 +5,5 @@ venv/
 .env
 state.json
 *.log
-client_secret.json
-token.json
+service-account.json
 run_log.jsonl

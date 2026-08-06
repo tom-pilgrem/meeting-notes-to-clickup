@@ -6,11 +6,13 @@ See [CLAUDE.md](CLAUDE.md) for the full pipeline design, config values, and rule
 ## Setup
 
 1. `pip install -r requirements.txt`
-2. Copy `.env.example` to `.env` and fill in:
+2. Create a Google service account (Google Cloud Console → IAM & Admin → Service Accounts), enable the Drive API on that project, and download a JSON key for the service account.
+3. Share the watched Drive folder with the service account's email address (`...@...iam.gserviceaccount.com`, found in the key file), with Viewer access — a service account has no Drive of its own, so without this it can't see the folder.
+4. Copy `.env.example` to `.env` and fill in:
    - `ANTHROPIC_API_KEY`
    - `CLICKUP_API_TOKEN` (personal API token, or an OAuth token, with access to the target list)
-   - `GOOGLE_OAUTH_CLIENT_SECRETS_FILE` — path to an OAuth client secrets JSON (Desktop app credential type) downloaded from Google Cloud Console, with the Drive API enabled
-3. Run `python main.py`. The first run opens a browser for Google OAuth consent; a `token.json` is cached afterward and refreshed automatically.
+   - `GOOGLE_SERVICE_ACCOUNT_FILE` — path to the service account JSON key from step 2
+5. Run `python main.py`. No browser consent step — the service account authenticates directly.
 
 ## Running it again
 
