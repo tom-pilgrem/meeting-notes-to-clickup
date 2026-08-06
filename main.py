@@ -19,6 +19,10 @@ def _log(entry: dict) -> None:
         f.write(json.dumps(entry) + "\n")
 
 
+def _flag_note(extraction: dict) -> str:
+    return f"⚠️ Flagged for review — {extraction['flag_type']}: {extraction['flags']}"
+
+
 def process_doc(doc: dict, state: dict) -> None:
     doc_id = doc["id"]
     doc_name = doc["name"]
@@ -26,8 +30,9 @@ def process_doc(doc: dict, state: dict) -> None:
 
     doc_text = drive.get_doc_text(doc_id)
     extraction = extract.extract_action_items(doc_text)
+    flagged = extraction["flag_type"] != "none"
 
-    if extraction["flag_type"] != "none":
+    if flagged:
         _log(
             {
                 "event": "flagged",
@@ -38,12 +43,27 @@ def process_doc(doc: dict, state: dict) -> None:
             }
         )
         print(f"[FLAGGED] {doc_name}: {extraction['flag_type']} — {extraction['flags']}")
-        # Deliberately not marking as processed: a flagged doc should be
-        # re-evaluated after human review, not silently skipped forever.
-        return
+
+    action_items = extraction["action_items"]
+    if flagged and not action_items:
+        # Nothing was extracted to attach the flag to — still surface it as a
+        # single review task rather than letting it disappear into the log.
+        action_items = [
+            {
+                "title": f"Review meeting note: {doc_name}",
+                "assignee": "unassigned",
+                "priority": "normal",
+            }
+        ]
 
     created_task_ids = []
-    for item in extraction["action_items"]:
+    for item in action_items:
+        if flagged:
+            item = {
+                **item,
+                "description": _flag_note(extraction)
+                + (f"\n\n{item['description']}" if item.get("description") else ""),
+            }
         task = clickup.create_task(item)
         created_task_ids.append(task["id"])
         _log(
@@ -53,9 +73,11 @@ def process_doc(doc: dict, state: dict) -> None:
                 "doc_name": doc_name,
                 "task_id": task["id"],
                 "title": item["title"],
+                "flagged": flagged,
             }
         )
-        print(f"[CREATED] {doc_name}: {item['title']} -> task {task['id']}")
+        tag = "CREATED (FLAGGED)" if flagged else "CREATED"
+        print(f"[{tag}] {doc_name}: {item['title']} -> task {task['id']}")
 
     mark_processed(state, doc_id, modified_time, created_task_ids)
 
