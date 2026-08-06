@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+state.json
+*.log
+client_secret.json
+token.json
+run_log.jsonl
