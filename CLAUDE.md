@@ -13,8 +13,10 @@ Claude Haiku extraction call with a pre-tested prompt and tool schema.
 3. Call the Claude API (model: Haiku) with a fixed prompt + forced tool call
    (`create_action_items`) to extract structured action items.
 4. Map extracted fields to ClickUp task fields (assignee, due date, priority).
-5. Create tasks in a specific ClickUp list -- unless the extraction is
-   flagged for human review, in which case skip auto-creation and surface it.
+5. Create tasks in a specific ClickUp list. If the extraction was flagged for
+   human review, still create the task(s), but prepend the flag_type and
+   flags explanation to each task's description so the assignee sees it and
+   reviews in ClickUp rather than the task silently vanishing into a log.
 6. Track which docs have already been processed so re-runs don't duplicate
    tasks.
 
@@ -126,10 +128,17 @@ don't call the API per-task). If no confident match, leave the task
 unassigned and note it in the run log -- do not silently assign the wrong
 person.
 
-**Flagged extractions (`flag_type != "none"`):** do NOT auto-create the
-ClickUp task. Log the doc, the flag_type, and the flags explanation
-somewhere reviewable (a run log file is enough to start). This is a
-deliberate human-in-the-loop gate, not an error case to swallow.
+**Flagged extractions (`flag_type != "none"`):** still create the ClickUp
+task(s) -- do not skip creation. Prepend a review note (the flag_type and the
+flags explanation) to each task's description, so the flag is visible to the
+assignee directly in ClickUp rather than only in a log file. If the
+extraction returned no action items (e.g. `flag_type: "no_action_items"`),
+create a single fallback task for the doc (title referencing the doc name)
+carrying the flag note, so a flagged doc never disappears without producing
+anything to review. Also log the doc, flag_type, and flags explanation to the
+run log for traceability. This is a human-in-the-loop review mechanism, not
+an error case to swallow -- the review now happens via the created task(s)
+rather than by re-running the pipeline.
 
 ---
 
@@ -163,7 +172,9 @@ above so the extraction step is reproducible outside a Claude Code session.
 
 1. Never modify the extraction prompt or tool schema without the user's
    explicit sign-off -- it's already been tested and tuned.
-2. Never auto-create a ClickUp task for a flagged extraction.
+2. For a flagged extraction, still create the ClickUp task(s), but always
+   prepend the flag_type and flags explanation to the task description --
+   never create a flagged task that looks identical to an unflagged one.
 3. Never guess an assignee ClickUp ID from a partial name match -- prefer
    leaving unassigned over misassigning.
 4. Keep credentials out of the repo (env vars only, `.gitignore`d).
