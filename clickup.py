@@ -7,7 +7,13 @@ from datetime import datetime, timezone
 
 import requests
 
-from config import CLICKUP_API_TOKEN, CLICKUP_LIST_ID, CLICKUP_PRIORITY, CLICKUP_TEAM_ID
+from config import (
+    CLICKUP_API_TOKEN,
+    CLICKUP_FLAG_TYPE_FIELD_ID,
+    CLICKUP_LIST_ID,
+    CLICKUP_PRIORITY,
+    CLICKUP_TEAM_ID,
+)
 
 API_BASE = "https://api.clickup.com/api/v2"
 
@@ -77,11 +83,18 @@ def _due_date_to_ms(due_date: str | None) -> int | None:
     return int(dt.timestamp() * 1000)
 
 
-def create_task(item: dict, list_id: str = CLICKUP_LIST_ID) -> dict:
+def create_task(
+    item: dict, flag_type: str | None = None, list_id: str = CLICKUP_LIST_ID
+) -> dict:
     """Create a single ClickUp task from one extracted action item.
 
     `item` is one entry from the extraction's action_items array:
     {title, assignee, due_date?, priority, description?}
+
+    `flag_type` is the extraction's flag_type (e.g. "possible_duplicate"),
+    passed only when the source extraction was flagged. Written into the
+    list's "Flag Type" custom field so flagged tasks can be filtered/sorted
+    on in ClickUp views, in addition to the note in the task description.
     """
     payload: dict = {
         "name": item["title"],
@@ -97,6 +110,11 @@ def create_task(item: dict, list_id: str = CLICKUP_LIST_ID) -> dict:
     due_date_ms = _due_date_to_ms(item.get("due_date"))
     if due_date_ms is not None:
         payload["due_date"] = due_date_ms
+
+    if flag_type:
+        payload["custom_fields"] = [
+            {"id": CLICKUP_FLAG_TYPE_FIELD_ID, "value": flag_type}
+        ]
 
     response = requests.post(
         f"{API_BASE}/list/{list_id}/task", headers=_headers(), json=payload

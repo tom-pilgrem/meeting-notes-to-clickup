@@ -121,6 +121,7 @@ structured -- never parse free text for this step.
 | `assignee` | `assignees` (user ID array) | resolve name -> ClickUp user ID first (see below); if unresolved or `"unassigned"`, leave assignees empty rather than guessing |
 | `due_date` (ISO date) | `due_date` (Unix ms epoch) | convert; omit the field entirely if not present in extraction |
 | `priority` | ClickUp numeric priority | `urgent`→1, `high`→2, `normal`→3, `low`→4 |
+| `flag_type` (when != "none") | "Flag Type" custom field (`d74548fd-763e-408c-b488-fc45a0759cd7`, short_text, list `901616291856`) | write the flag_type string directly; omit the custom field entirely for unflagged tasks |
 
 **Assignee resolution:** ClickUp needs a user ID, not a name. Look up the
 extracted name against the workspace member list once per run (cache it,
@@ -131,7 +132,9 @@ person.
 **Flagged extractions (`flag_type != "none"`):** still create the ClickUp
 task(s) -- do not skip creation. Prepend a review note (the flag_type and the
 flags explanation) to each task's description, so the flag is visible to the
-assignee directly in ClickUp rather than only in a log file. If the
+assignee directly in ClickUp rather than only in a log file. Also write the
+flag_type into the "Flag Type" custom field on the task, so flagged tasks can
+be filtered/sorted on in ClickUp views without opening each one. If the
 extraction returned no action items (e.g. `flag_type: "no_action_items"`),
 create a single fallback task for the doc (title referencing the doc name)
 carrying the flag note, so a flagged doc never disappears without producing
