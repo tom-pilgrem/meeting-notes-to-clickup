@@ -16,5 +16,5 @@ See [CLAUDE.md](CLAUDE.md) for the full pipeline design, config values, and rule
 
 ## Running it again
 
-Re-running `python main.py` only processes docs that are new or have changed `modifiedTime` since the last run — tracked in `state.json`. Flagged extractions (see `run_log.jsonl`) are deliberately left unprocessed so they get re-evaluated after human review rather than silently skipped.
+Re-running `python main.py` only processes docs that are new or have changed `modifiedTime` since the last run — tracked in `state.json`. If an extraction is flagged (e.g. a possible duplicate, or an ambiguous owner), the ClickUp task(s) still get created, but with the flag type and explanation prepended to the task description — so review happens directly in ClickUp rather than by re-reading `run_log.jsonl`.
 
