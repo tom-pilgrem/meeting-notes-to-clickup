@@ -26,3 +26,5 @@
 {"event": "task_created", "doc_id": "1QJE4T-5Y5aKZaac47AAyE5nQgIAr_zSFL2K8aQmVLSs", "doc_name": "6th August 2026 - Meeting with Mounir", "task_id": "86d3yn41v", "title": "Discuss with Steve/Russell the new reporting lines", "flagged": false, "timestamp": "2026-08-06T07:59:30.118847+00:00"}
 {"event": "task_created", "doc_id": "1QJE4T-5Y5aKZaac47AAyE5nQgIAr_zSFL2K8aQmVLSs", "doc_name": "6th August 2026 - Meeting with Mounir", "task_id": "86d3yn422", "title": "Build out Claude Code demo based on the discussion", "flagged": false, "timestamp": "2026-08-06T07:59:30.757375+00:00"}
 {"event": "run_end", "timestamp": "2026-08-06T07:59:30.757915+00:00"}
+{"event": "run_start", "docs_seen": 5, "timestamp": "2026-08-07T00:22:12.939403+00:00"}
+{"event": "run_end", "timestamp": "2026-08-07T00:22:12.939513+00:00"}
