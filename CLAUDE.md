@@ -182,10 +182,22 @@ baked into the cron expression. If the business hours or timezone ever
 change, update the `check` job's shell logic in the workflow file, not a
 cron string.
 
-**Manual runs** (`workflow_dispatch`) always execute regardless of time --
-the business-hours gate only applies to `schedule`-triggered runs. This is
-deliberate, so the pipeline can be triggered on demand for testing without
-fighting the time gate.
+**Trigger mechanism:** GitHub's native `schedule:` cron is unreliable in
+practice -- ticks get silently dropped under platform load, not just
+delayed (observed directly on this repo: several consecutive hourly ticks
+missing entirely). Because of this, the primary trigger is an external cron
+service (outside GitHub) that calls the `workflow_dispatch` REST API
+hourly. `schedule:` is left in the workflow as a low-cost backup in case
+the external pinger has downtime -- `concurrency` plus the dedup logic in
+`state.py` make overlapping or duplicate triggers harmless, so there's no
+cost to leaving both in place.
+
+**Manual/forced runs:** `workflow_dispatch` does **not** bypass the
+business-hours gate by default -- since it's now the primary automated
+trigger, it goes through the same `check` job as `schedule`. To force a
+one-off run outside business hours (e.g. for testing), pass the `force`
+input as `true`, either via the "Run workflow" button in the Actions UI or
+`"inputs": {"force": "true"}` in the dispatch API call.
 
 ---
 

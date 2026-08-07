@@ -1,15 +1,27 @@
 name: Run meeting-notes-to-clickup pipeline
 
-# Fires hourly, every day -- the "check" job below is what actually enforces
-# 9am-5pm weekdays. Cron itself only understands UTC and can't follow
-# daylight saving, so the business-hours window is enforced at runtime
-# against Australia/Sydney local time instead of baked into the cron
-# expression. Manual runs (workflow_dispatch) always execute, regardless of
-# time, so this can be triggered on demand for testing.
+# GitHub's own `schedule:` cron delivery is unreliable under load (ticks get
+# silently dropped, not just delayed), so the primary trigger is an external
+# cron service calling the workflow_dispatch REST API hourly. `schedule:` is
+# kept as a low-cost backup in case the external pinger has downtime --
+# concurrency + the dedup logic in state.py make overlapping/duplicate
+# triggers harmless.
+#
+# The "check" job enforces 9am-5pm Sydney weekdays at runtime for BOTH
+# trigger types. Cron itself only understands UTC and can't follow daylight
+# saving, so the window is computed against Australia/Sydney local time
+# rather than baked into the cron expression. workflow_dispatch does not
+# bypass this gate by default -- pass `force: true` (via the Actions UI or
+# the API's `inputs`) to run a one-off test outside business hours.
 "on":
   schedule:
     - cron: "25 * * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Run regardless of business hours (manual testing only)"
+        type: boolean
+        default: false
 
 concurrency:
   group: meeting-notes-to-clickup
@@ -23,7 +35,8 @@ jobs:
     steps:
       - id: decide
         run: |
-          if [ "${{ github.event_name }}" != "schedule" ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.force }}" = "true" ]; then
+            echo "Forced run requested -- skipping business-hours check."
             echo "should_run=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
